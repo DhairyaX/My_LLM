@@ -1,7 +1,6 @@
 import torch
 
-from self_attention import SelfAttention
-
+from models.self_attention import SelfAttention
 torch.manual_seed(42)
 
 embedding_dim = 8

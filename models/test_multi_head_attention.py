@@ -1,7 +1,6 @@
 import torch
 
-from multi_head_attention import MultiHeadAttention
-
+from models.multi_head_attention import MultiHeadAttention
 torch.manual_seed(42)
 
 batch_size = 2

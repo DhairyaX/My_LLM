@@ -1,6 +1,6 @@
 import torch
 
-from transformer_block import TransformerBlock
+from models.transformer_block import TransformerBlock
 
 torch.manual_seed(42)
 
