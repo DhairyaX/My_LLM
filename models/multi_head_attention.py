@@ -42,6 +42,12 @@ class MultiHeadAttention(nn.Module):
         scores = torch.matmul(Q, K.transpose(-2, -1))
 
         scores = scores / math.sqrt(self.head_dim)
+        
+        mask = torch.tril(
+            torch.ones(seq_length, seq_length, device=x.device)
+        )
+
+        scores = scores.masked_fill(mask == 0, float("-inf"))
 
         attention = F.softmax(scores, dim=-1)
 
