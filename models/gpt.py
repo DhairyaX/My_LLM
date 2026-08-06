@@ -65,3 +65,33 @@ class GPT(nn.Module):
         logits = self.fc_out(x)
 
         return logits
+    
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens):
+
+        self.eval()
+
+        for _ in range(max_new_tokens):
+
+        # Keep only the last context window
+            idx_cond = idx[:, -self.position_embedding.num_embeddings:]
+
+            logits = self(idx_cond)
+
+        # Last token prediction
+            logits = logits[:, -1, :]
+
+            probs = torch.softmax(logits, dim=-1)
+
+            next_token = torch.argmax(
+                probs,
+                dim=-1,
+                keepdim=True
+            )
+
+            idx = torch.cat(
+                (idx, next_token),
+                dim=1
+            )
+
+        return idx

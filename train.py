@@ -127,4 +127,17 @@ for epoch in range(Config.epochs):
     print("-" * 50)
 
 
+# -----------------------------
+# Save Model
+# -----------------------------
 
+import os
+
+os.makedirs("checkpoints", exist_ok=True)
+
+torch.save(
+    model.state_dict(),
+    "checkpoints/gpt_model.pth"
+)
+
+print("\nModel saved successfully!")
