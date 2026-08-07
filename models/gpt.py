@@ -81,12 +81,18 @@ class GPT(nn.Module):
         # Last token prediction
             logits = logits[:, -1, :]
 
-            probs = torch.softmax(logits, dim=-1)
+            temperature = 0.8
 
-            next_token = torch.argmax(
+            logits = logits / temperature
+
+            probs = torch.softmax(
+                logits,
+                dim=-1
+            )
+
+            next_token = torch.multinomial(
                 probs,
-                dim=-1,
-                keepdim=True
+                num_samples=1
             )
 
             idx = torch.cat(
