@@ -13,7 +13,12 @@ class Config:
     # Training
     batch_size = 32
     learning_rate = 3e-4
-    epochs = 2
+    epochs = 4
 
     # Device
     device = "cuda"
+    
+    train_size = 4000
+    val_size = 1000
+    
+    dropout = 0.1
