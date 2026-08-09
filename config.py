@@ -28,7 +28,7 @@ class Config:
 
     learning_rate = 3e-4
 
-    epochs = 1
+    epochs = 15 
 
     # -----------------------------
     # Device

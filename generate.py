@@ -27,6 +27,7 @@ with open(
 ) as f:
     text = f.read()
 
+
 full_dataset = ShakespeareDataset(
     text,
     Config.block_size
@@ -48,13 +49,14 @@ model = GPT(
 
 
 # -----------------------------
-# Load Trained Model
+# Load Best Model
 # -----------------------------
 
 model.load_state_dict(
     torch.load(
         "checkpoints/best_model.pth",
-        map_location=device
+        map_location=device,
+        weights_only=True
     )
 )
 
@@ -71,10 +73,26 @@ print("Model loaded successfully!")
 
 prompt = input("Enter your prompt: ")
 
-encoded = [
-    full_dataset.stoi[c]
-    for c in prompt
-]
+
+# -----------------------------
+# Encode Prompt
+# -----------------------------
+
+try:
+
+    encoded = [
+        full_dataset.stoi[c]
+        for c in prompt
+    ]
+
+except KeyError as e:
+
+    print(
+        f"Character {e} is not in the vocabulary."
+    )
+
+    raise SystemExit
+
 
 x = torch.tensor(
     encoded,
@@ -88,15 +106,18 @@ x = torch.tensor(
 
 generated = model.generate(
     x,
-    max_new_tokens=100,
-    temperature=0.8,
-    top_k=10
+    max_new_tokens=50,
+    temperature=0.7,
+    top_k=20
 )
 
 
 # -----------------------------
 # Decode Tokens
 # -----------------------------
+prompt_length = x.shape[1]
+
+new_tokens = generated[0][prompt_length:]
 
 output = "".join(
     full_dataset.itos[token.item()]
@@ -108,6 +129,7 @@ output = "".join(
 # Print Result
 # -----------------------------
 
-print("\nGenerated Text:")
+print()
+print("Generated Text:")
 print("-----------------------------")
 print(output)
