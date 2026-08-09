@@ -47,21 +47,34 @@ full_dataset = ShakespeareDataset(
     Config.block_size
 )
 
+print(
+    "Total dataset samples:",
+    len(full_dataset)
+)
+
 
 # -----------------------------
 # Train / Validation Split
 # -----------------------------
 
+total_size = len(full_dataset)
+
+train_size = int(
+    0.9 * total_size
+)
+
+val_size = total_size - train_size
+
 train_dataset = Subset(
     full_dataset,
-    range(Config.train_size)
+    range(train_size)
 )
 
 val_dataset = Subset(
     full_dataset,
     range(
-        Config.train_size,
-        Config.train_size + Config.val_size
+        train_size,
+        total_size
     )
 )
 
@@ -82,8 +95,25 @@ val_loader = DataLoader(
     shuffle=False
 )
 
-print("Training batches:", len(train_loader))
-print("Validation batches:", len(val_loader))
+print(
+    "Training samples:",
+    len(train_dataset)
+)
+
+print(
+    "Validation samples:",
+    len(val_dataset)
+)
+
+print(
+    "Training batches:",
+    len(train_loader)
+)
+
+print(
+    "Validation batches:",
+    len(val_loader)
+)
 
 
 # -----------------------------
@@ -101,17 +131,35 @@ model = GPT(
 
 model = model.to(device)
 
+print(
+    "Model parameters:",
+    sum(
+        p.numel()
+        for p in model.parameters()
+    )
+)
+
 
 # -----------------------------
-# Loss & Optimizer
+# Loss
 # -----------------------------
 
 criterion = nn.CrossEntropyLoss()
+
+
+# -----------------------------
+# Optimizer
+# -----------------------------
 
 optimizer = optim.AdamW(
     model.parameters(),
     lr=Config.learning_rate
 )
+
+
+# -----------------------------
+# Learning Rate Scheduler
+# -----------------------------
 
 scheduler = optim.lr_scheduler.CosineAnnealingLR(
     optimizer,
@@ -125,7 +173,9 @@ scheduler = optim.lr_scheduler.CosineAnnealingLR(
 
 start_epoch = 0
 
-if RESUME and os.path.exists(CHECKPOINT_PATH):
+if RESUME and os.path.exists(
+    CHECKPOINT_PATH
+):
 
     checkpoint = torch.load(
         CHECKPOINT_PATH,
@@ -147,15 +197,21 @@ if RESUME and os.path.exists(CHECKPOINT_PATH):
     start_epoch = checkpoint["epoch"]
 
     print(
-        f"Resuming training from epoch {start_epoch}"
+        f"Resuming training from "
+        f"epoch {start_epoch}"
     )
+
+
+# -----------------------------
+# Best Validation Loss
+# -----------------------------
+
+best_val_loss = float("inf")
 
 
 # -----------------------------
 # Training Loop
 # -----------------------------
-
-best_val_loss = float("inf")
 
 for epoch in range(
     start_epoch,
@@ -164,37 +220,61 @@ for epoch in range(
 
     model.train()
 
-    total_train_loss = 0
+    total_train_loss = 0.0
 
-    for batch_idx, (x, y) in enumerate(train_loader):
+
+    # -----------------------------
+    # Training Batches
+    # -----------------------------
+
+    for batch_idx, (x, y) in enumerate(
+        train_loader
+    ):
 
         x = x.to(device)
         y = y.to(device)
 
+        # Clear gradients
         optimizer.zero_grad()
 
+        # Forward pass
         logits = model(x)
 
+        # Calculate loss
         loss = criterion(
-            logits.view(-1, full_dataset.vocab_size),
+            logits.view(
+                -1,
+                full_dataset.vocab_size
+            ),
             y.view(-1)
         )
 
+        # Backpropagation
         loss.backward()
+
+        # Gradient clipping
         torch.nn.utils.clip_grad_norm_(
-        model.parameters(),
-        max_norm=1.0
-       )
+            model.parameters(),
+            max_norm=1.0
+        )
+
+        # Update weights
         optimizer.step()
 
         total_train_loss += loss.item()
+
+
+        # -----------------------------
+        # Progress
+        # -----------------------------
 
         if (batch_idx + 1) % 100 == 0:
 
             print(
                 f"Epoch {epoch + 1} | "
                 f"Batch {batch_idx + 1} | "
-                f"Training Loss {loss.item():.4f}"
+                f"Training Loss "
+                f"{loss.item():.4f}"
             )
 
 
@@ -203,7 +283,8 @@ for epoch in range(
     # -----------------------------
 
     avg_train_loss = (
-        total_train_loss / len(train_loader)
+        total_train_loss
+        / len(train_loader)
     )
 
 
@@ -213,7 +294,7 @@ for epoch in range(
 
     model.eval()
 
-    total_val_loss = 0
+    total_val_loss = 0.0
 
     with torch.no_grad():
 
@@ -225,34 +306,60 @@ for epoch in range(
             logits = model(x)
 
             loss = criterion(
-                logits.view(-1, full_dataset.vocab_size),
+                logits.view(
+                    -1,
+                    full_dataset.vocab_size
+                ),
                 y.view(-1)
             )
 
             total_val_loss += loss.item()
 
 
+    # -----------------------------
+    # Average Validation Loss
+    # -----------------------------
+
     avg_val_loss = (
-        total_val_loss / len(val_loader)
+        total_val_loss
+        / len(val_loader)
     )
-    
+
+
+    # -----------------------------
+    # Perplexity
+    # -----------------------------
+
     perplexity = torch.exp(
-    torch.tensor(avg_val_loss)
+        torch.tensor(avg_val_loss)
     )
-    
+
+
+    # -----------------------------
+    # Save Best Model
+    # -----------------------------
+
     if avg_val_loss < best_val_loss:
 
         best_val_loss = avg_val_loss
+
+        os.makedirs(
+            "checkpoints",
+            exist_ok=True
+        )
 
         torch.save(
             model.state_dict(),
             "checkpoints/best_model.pth"
         )
 
-        print("New best model saved!")
+        print(
+            "New best model saved!"
+        )
+
 
     # -----------------------------
-    # Learning Rate Scheduler
+    # Learning Rate
     # -----------------------------
 
     scheduler.step()
@@ -269,17 +376,20 @@ for epoch in range(
     )
 
     print(
-        f"Training Loss:   {avg_train_loss:.4f}"
+        f"Training Loss:   "
+        f"{avg_train_loss:.4f}"
     )
 
     print(
-        f"Validation Loss: {avg_val_loss:.4f}"
+        f"Validation Loss: "
+        f"{avg_val_loss:.4f}"
     )
-    
+
     print(
-    f"Perplexity:      {perplexity.item():.4f}"
+        f"Perplexity:      "
+        f"{perplexity.item():.4f}"
     )
-    
+
     print(
         f"Learning Rate:   "
         f"{optimizer.param_groups[0]['lr']:.6f}"
@@ -299,9 +409,14 @@ for epoch in range(
 
     checkpoint = {
         "epoch": epoch + 1,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-        "scheduler_state_dict": scheduler.state_dict()
+        "model_state_dict":
+            model.state_dict(),
+        "optimizer_state_dict":
+            optimizer.state_dict(),
+        "scheduler_state_dict":
+            scheduler.state_dict(),
+        "best_val_loss":
+            best_val_loss
     }
 
     torch.save(
@@ -309,12 +424,20 @@ for epoch in range(
         CHECKPOINT_PATH
     )
 
+    # Save latest model
     torch.save(
         model.state_dict(),
         "checkpoints/gpt_model.pth"
     )
 
-    print("Checkpoint saved.")
+    print(
+        "Checkpoint saved."
+    )
 
 
-print("\nTraining finished!")
+# -----------------------------
+# Training Finished
+# -----------------------------
+
+print()
+print("Training finished!")
